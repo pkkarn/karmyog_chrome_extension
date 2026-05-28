@@ -21,3 +21,7 @@ Thumbs.db
 # Supabase Local Cache & Secrets
 supabase/.temp/
 .supabase/
+
+# Local Project Logs
+project_description.md
+
