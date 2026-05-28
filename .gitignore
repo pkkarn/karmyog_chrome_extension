@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production build outputs (Chrome Extension unpacked folders)
+dist/
+
+# Environment Variables & Private Configurations
+.env
+.env.local
+.env.production
+.env.development
+.env.*.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Supabase Local Cache & Secrets
+supabase/.temp/
+.supabase/

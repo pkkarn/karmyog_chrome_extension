@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Karm Yog",
+  "version": "1.0.0",
+  "description": "Premium Task Management & AI ATS Resume Tailoring tool.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "commands": {
+    "trigger-task-form": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "Alt+Shift+T"
+      },
+      "description": "Open Quick Task Input Form"
+    },
+    "trigger-task-list": {
+      "suggested_key": {
+        "default": "Alt+Shift+V",
+        "mac": "Alt+Shift+V"
+      },
+      "description": "Open Task List Manager"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "32": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  }
+}
