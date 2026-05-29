@@ -18,6 +18,7 @@ const Popup: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newText, setNewText] = useState('');
   const [session, setSession] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   // Auth States
   const [isSignUp, setIsSignUp] = useState(false);
@@ -66,14 +67,16 @@ const Popup: React.FC = () => {
     chrome.storage.local.set({ tasksLastSynced: Date.now() });
   };
 
-  // 2. Fetch tasks based on login status & listen for global refetch triggers
+  // 2. Fetch tasks and profile based on login status & listen for global refetch triggers
   useEffect(() => {
     fetchTasks();
+    fetchProfile();
 
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
       // Online mode: refetch from Supabase whenever any tab triggers tasksLastSynced
       if (changes.tasksLastSynced && session) {
         fetchTasks();
+        fetchProfile();
       }
     };
     chrome.storage.onChanged.addListener(handleStorageChange);
@@ -107,6 +110,24 @@ const Popup: React.FC = () => {
       }
     } else {
       setTasks([]);
+    }
+  };
+
+  const fetchProfile = async () => {
+    if (session) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile from Supabase:', error);
+      } else if (data) {
+        setProfile(data);
+      }
+    } else {
+      setProfile(null);
     }
   };
 
@@ -397,6 +418,29 @@ const Popup: React.FC = () => {
             </button>
           </form>
 
+          {/* Stripe Billing Gate Notification */}
+          {profile && !profile.is_premium && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl flex flex-col gap-2 relative overflow-hidden backdrop-blur-md">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider font-mono flex items-center gap-1">
+                    ⭐ Karm Yog Premium
+                  </span>
+                  <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                    Unlock instant technical AI mock evaluations & score audits for **$5/month**.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.open('https://checkout.stripe.com/c/pay/mock_session', '_blank')}
+                className="w-full py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-lg text-[9px] transition-all shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 cursor-pointer"
+              >
+                Upgrade Now via Stripe
+              </button>
+            </div>
+          )}
+
           {/* Task List Section */}
           <main className="flex-1 flex flex-col gap-2 relative z-10 overflow-y-auto max-h-[260px] pr-1">
             {tasks.length === 0 ? (
@@ -549,9 +593,16 @@ const Popup: React.FC = () => {
 
           {/* Footer Stats & Account Info */}
           <footer className="mt-4 pt-3 border-t border-slate-900 flex justify-between items-center text-[9px] text-slate-505 font-semibold relative z-10">
-            <span className="truncate max-w-[150px] font-mono text-slate-600" title={session.user.email}>
-              {session.user.email}
-            </span>
+            <div className="flex items-center gap-1.5 truncate max-w-[170px]">
+              <span className="truncate text-slate-650 font-mono" title={session.user.email}>
+                {session.user.email}
+              </span>
+              {profile?.is_premium && (
+                <span className="px-1.5 py-0.5 text-[8px] font-bold font-mono rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest shrink-0 animate-pulse">
+                  PRO
+                </span>
+              )}
+            </div>
             <span>{completedCount}/{tasks.length} completed</span>
           </footer>
         </>

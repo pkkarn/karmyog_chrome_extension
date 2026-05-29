@@ -41,13 +41,59 @@ serve(async (req) => {
     console.log(`Evaluating task ${id}: "${title}"`)
     console.log(`User Understanding: "${understanding}"`)
 
-    // 3. Initialize OpenAI Client using Deno environment variables
+    // 3. Initialize Supabase Admin Client using service role key (bypasses RLS safely inside edge container)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error("Missing Supabase URL or Service Role Key in Edge container.")
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    })
+
+    // 4. Verify user premium billing status in the database
+    const { data: profile, error: profileErr } = await supabaseAdmin
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user_id)
+      .single()
+
+    if (profileErr || !profile) {
+      console.warn(`Profile not found for user ${user_id}. Access Denied.`)
+      return new Response(JSON.stringify({ error: "Billing profile not found" }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      })
+    }
+
+    if (!profile.is_premium) {
+      console.warn(`User ${user_id} is not premium. Gating task completion.`)
+      // Write a premium reminder explanation back to the task row for display in UI
+      await supabaseAdmin
+        .from('tasks')
+        .update({
+          explanation: "⭐ Premium subscription required to generate technical evaluations. Upgrade to Premium for $5/month."
+        })
+        .eq('id', id)
+
+      return new Response(JSON.stringify({ error: "Premium subscription required" }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      })
+    }
+
+    // 5. Initialize OpenAI Client using Deno environment variables
     const openAiApiKey = Deno.env.get('OPENAI_API_KEY')
     if (!openAiApiKey) {
       throw new Error("Missing OPENAI_API_KEY environment variable in Supabase Vault.")
     }
 
-    // 4. Construct System Evaluation Prompt for GPT-4o-mini
+    // 6. Construct System Evaluation Prompt for GPT-4o-mini
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -94,22 +140,7 @@ Return JSON format strictly:
     const { score, explanation } = JSON.parse(aiResultString)
     console.log(`AI Evaluation Completed. Score: ${score}/10`)
 
-    // 5. Initialize Supabase Admin Client using service role key (bypasses RLS safely inside edge container)
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Missing Supabase URL or Service Role Key in Edge container.")
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    })
-
-    // 6. Write evaluation back to the specific row in public.tasks
+    // 7. Write evaluation back to the specific row in public.tasks
     const { error: updateError } = await supabaseAdmin
       .from('tasks')
       .update({
