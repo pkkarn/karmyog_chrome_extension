@@ -438,7 +438,7 @@ const Popup: React.FC = () => {
                 </div>
               </div>
               <button
-                onClick={() => window.open('https://checkout.stripe.com/c/pay/mock_session', '_blank')}
+                onClick={() => window.open('https://buy.stripe.com/test_5kQ3cudpd2U47DM6QabbG00', '_blank')}
                 className="w-full py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold rounded-lg text-[9px] transition-all shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 cursor-pointer"
               >
                 Upgrade Now via Stripe
