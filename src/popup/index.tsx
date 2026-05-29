@@ -122,7 +122,12 @@ const Popup: React.FC = () => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile from Supabase:', error);
+        if (error.code === 'PGRST116') {
+          // Graceful fallback for pre-existing users who signed up before the trigger was created
+          setProfile({ id: session.user.id, email: session.user.email, is_premium: false });
+        } else {
+          console.error('Error fetching profile from Supabase:', error);
+        }
       } else if (data) {
         setProfile(data);
       }
